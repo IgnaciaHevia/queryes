@@ -1,0 +1,8 @@
+SELECT 
+  tas.trip_id,
+  tas.email,
+  tas.add_on_id
+FROM oceanic-oxide-434501-c6.ops.middle_procs_dipcher tas
+LEFT JOIN oceanic-oxide-434501-c6.ops.trips tps 
+  ON tas.trip_id = tps.id_viaje AND tas.add_on_id = tps.add_on_id
+WHERE tps.add_on_id IS NULL
