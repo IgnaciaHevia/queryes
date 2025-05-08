@@ -1,0 +1,6 @@
+SELECT 
+ t.first_name, t.last_name, t.email
+FROM `ops.travelers2` t
+LEFT JOIN ops.middle_procs_dipcher m
+  ON LOWER(t.email) = LOWER(m.email)
+WHERE m.email IS NULL and t.trip_id = "Testeo_Trip" 
