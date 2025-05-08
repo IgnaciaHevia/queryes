@@ -1,0 +1,49 @@
+WITH tra AS (
+  SELECT 
+    REPLACE(t.Please_confirm_this_is_your_trip, '\\', '') AS trip_id, 
+    First_name AS first_name, 
+    Last_name AS last_name,
+    Phone_number AS phone_number, 
+    Gender AS gender,
+    Email AS email,
+    Your_date_of_birth AS birth_date, 
+    What_s_your_nationality__ AS nationality,
+    Please_provide_your_passport_number AS passport_number, 
+    If_you_are_not_a_US_citizen__please_provide_your_US_Visa_Number___ AS us_visa, 
+    Do_you_have_any_food_restrictions_or_allergies__Please_name_them AS food_restrictions,
+    CAST(Are_you_traveling_with_your_partner_ AS STRING) AS partner,
+    Please_provide_your_partner_s_name_and_last_name AS partner_name, 
+    Submitted_At AS emission_date,
+    ROW_NUMBER() OVER (
+      PARTITION BY Please_confirm_this_is_your_trip, Email, Your_date_of_birth
+      ORDER BY Submitted_At DESC
+    ) AS row_num,
+    ROW_NUMBER() OVER (
+      PARTITION BY Please_confirm_this_is_your_trip, First_name, Last_name, Your_date_of_birth
+      ORDER BY Submitted_At DESC
+    ) AS row_num_name
+  FROM `oceanic-oxide-434501-c6.ops.travelers` t
+  WHERE What_s_your_nationality__ IS NOT NULL OR Please_confirm_this_is_your_trip LIKE '%Berkeley%'
+),
+
+final_travelers AS (
+  SELECT 
+    t.trip_id, 
+    CASE WHEN rt.replaced_traveler IS NULL THEN t.gender ELSE rt.gender END AS gender
+  FROM tra t
+  LEFT JOIN `oceanic-oxide-434501-c6.ops.deleted_travelers_procs` dt 
+    ON dt.trip_id = t.trip_id AND dt.email = t.email
+  LEFT JOIN `oceanic-oxide-434501-c6.ops.replacement_travelers_procs` rt 
+    ON rt.trip_id = t.trip_id AND rt.replaced_traveler = t.email
+  WHERE t.row_num = 1 AND t.row_num_name = 1 AND dt.email IS NULL
+)
+
+SELECT 
+  trip_id,
+  gender,
+  COUNT(*) AS gender_count,
+  MOD(COUNT(*), 2) AS is_odd
+FROM final_travelers
+WHERE gender IN ('M', 'F')
+GROUP BY trip_id, gender
+HAVING MOD(COUNT(*), 2) = 1
